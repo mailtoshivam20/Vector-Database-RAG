@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Insurellm Employee Directory</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <h1>Insurellm Employee Directory</h1>
+      <p>Find colleagues, their roles, and how to reach them.</p>
+      <div class="stats" id="stats"></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="controls">
+      <input type="search" id="search" placeholder="Search by name, role, skill or location…" aria-label="Search employees">
+      <select id="department" aria-label="Filter by department">
+        <option value="">All departments</option>
+      </select>
+      <select id="sort" aria-label="Sort employees">
+        <option value="name">Sort: Name</option>
+        <option value="joined">Sort: Newest first</option>
+        <option value="department">Sort: Department</option>
+      </select>
+    </section>
+
+    <p class="result-count" id="resultCount"></p>
+    <section class="grid" id="grid"></section>
+    <p class="empty" id="empty" hidden>No employees match your search.</p>
+  </main>
+
+  <dialog id="detail">
+    <button class="close" id="closeDetail" aria-label="Close">&times;</button>
+    <div id="detailBody"></div>
+  </dialog>
+
+  <footer>
+    <div class="container">&copy; Insurellm &middot; Internal use only</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
