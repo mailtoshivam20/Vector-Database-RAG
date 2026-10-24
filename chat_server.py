@@ -11,7 +11,7 @@ import importlib.util
 import json
 import os
 import re
-import secrets
+import uuid
 import threading
 import time
 from pathlib import Path
@@ -20,25 +20,22 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from dotenv import load_dotenv
 
-from app_logging import log_chat, log_event
-
-load_dotenv(override=True)
+import config
+from app_logging import log_chat, log_event, logger
 
 ROOT = Path(__file__).parent
 SITE = ROOT / "employee-website"
 USERS_FILE = ROOT / "users.json"
 
-COOKIE = "session"
-SESSION_SECONDS = 8 * 3600
-# Set SESSION_SECRET in .env to keep sessions valid across restarts.
-SECRET = (os.getenv("SESSION_SECRET") or secrets.token_hex(32)).encode()
+COOKIE = config.COOKIE_NAME
+SESSION_SECONDS = config.SESSION_SECONDS
+SECRET = config.SESSION_SECRET
 PUBLIC_PATHS = {"/login", "/api/login", "/register", "/api/register", "/styles.css"}
-MAX_FAILS, LOCKOUT_SECONDS = 5, 300
+MAX_FAILS, LOCKOUT_SECONDS = config.MAX_FAILED_LOGINS, config.RATE_WINDOW_SECONDS
 failed: dict[str, list[float]] = {}
 signups: dict[str, list[float]] = {}
-MAX_SIGNUPS = 5
+MAX_SIGNUPS = config.MAX_SIGNUPS
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_.@-]{3,40}$")
 users_lock = threading.Lock()
 
@@ -115,6 +112,27 @@ async def require_login(request: Request, call_next):
     return RedirectResponse("/login")
 
 
+@app.middleware("http")
+async def observability(request: Request, call_next):
+    """Outermost layer: request ID, access log, central error handling, security headers."""
+    request_id = uuid.uuid4().hex[:12]
+    request.state.request_id = request_id
+    started = time.time()
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception("unhandled_error request_id=%s %s %s", request_id, request.method, request.url.path)
+        log_event("unhandled_error", getattr(request.state, "user", None), client_ip(request),
+                  f"request_id={request_id} {request.method} {request.url.path}", "ERROR")
+        response = JSONResponse({"detail": "Something went wrong", "request_id": request_id}, status_code=500)
+    response.headers["X-Request-ID"] = request_id
+    for name, value in config.SECURITY_HEADERS.items():
+        response.headers[name] = value
+    logger.info("access request_id=%s %s %s -> %d (%d ms)", request_id, request.method,
+                request.url.path, response.status_code, int((time.time() - started) * 1000))
+    return response
+
+
 class Login(BaseModel):
     username: str
     password: str
@@ -146,7 +164,7 @@ def register_page():
 
 def start_session(response: Response, username: str):
     response.set_cookie(COOKIE, make_token(username), max_age=SESSION_SECONDS,
-                        httponly=True, samesite="lax")
+                        httponly=True, samesite="lax", secure=config.COOKIE_SECURE)
 
 
 @app.post("/api/register")
@@ -202,7 +220,7 @@ def chat(req: ChatRequest, request: Request):
     question = req.question.strip()
     if not question:
         raise HTTPException(400, "Question is empty")
-    history = [m.model_dump() for m in req.history[-10:]]
+    history = [m.model_dump() for m in req.history[-config.MAX_HISTORY_MESSAGES:]]
     user, ip, started = request.state.user, client_ip(request), time.time()
     try:
         answer, docs = rag.answer_question(question, history)
