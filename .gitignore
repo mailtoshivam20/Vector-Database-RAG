@@ -219,3 +219,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 /.vs
+
+# Login data (hashed passwords, demo credentials)
+users.json
+demo_credentials.txt

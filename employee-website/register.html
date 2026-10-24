@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create account - Insurellm</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-body">
+  <form class="login-card" id="registerForm">
+    <h1>Insurellm</h1>
+    <p>Create an account to view the employee directory.</p>
+    <label>Username <input id="username" autocomplete="username" minlength="3" maxlength="40" required autofocus></label>
+    <label>Password <input id="password" type="password" autocomplete="new-password" minlength="8" required></label>
+    <label>Confirm password <input id="confirm" type="password" autocomplete="new-password" minlength="8" required></label>
+    <p class="login-error" id="error" role="alert" hidden></p>
+    <button type="submit">Create account</button>
+    <p class="login-alt">Already have an account? <a href="/login">Sign in</a></p>
+  </form>
+  <script>
+    document.getElementById("registerForm").addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const error = document.getElementById("error");
+      const show = msg => { error.textContent = msg; error.hidden = false; };
+      error.hidden = true;
+      const password = document.getElementById("password").value;
+      if (password !== document.getElementById("confirm").value) return show("Passwords do not match");
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: document.getElementById("username").value, password }),
+      });
+      if (res.ok) return (location.href = "/");
+      const detail = (await res.json().catch(() => ({}))).detail;
+      show(Array.isArray(detail) ? "Please check your details" : detail || "Could not create account");
+    });
+  </script>
+</body>
+</html>

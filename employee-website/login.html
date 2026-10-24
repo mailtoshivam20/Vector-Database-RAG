@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in - Insurellm</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-body">
+  <form class="login-card" id="loginForm">
+    <h1>Insurellm</h1>
+    <p>Sign in to view the employee directory.</p>
+    <label>Username <input id="username" autocomplete="username" required autofocus></label>
+    <label>Password <input id="password" type="password" autocomplete="current-password" required></label>
+    <p class="login-error" id="error" role="alert" hidden></p>
+    <button type="submit">Sign in</button>
+    <p class="login-alt">New here? <a href="/register">Create an account</a></p>
+  </form>
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const error = document.getElementById("error");
+      error.hidden = true;
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("username").value,
+          password: document.getElementById("password").value,
+        }),
+      });
+      if (res.ok) return (location.href = "/");
+      error.textContent = (await res.json().catch(() => ({}))).detail || "Sign in failed";
+      error.hidden = false;
+    });
+  </script>
+</body>
+</html>

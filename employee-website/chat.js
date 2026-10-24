@@ -11,6 +11,10 @@
     document.getElementById("chatFab").hidden = open;
     if (open) input.focus();
   };
+  document.getElementById("logout").addEventListener("click", async () => {
+    await fetch("/api/logout", { method: "POST" });
+    location.href = "/login";
+  });
   document.getElementById("chatFab").addEventListener("click", () => toggle(true));
   document.getElementById("chatClose").addEventListener("click", () => toggle(false));
 
@@ -42,6 +46,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, history }),
       });
+      if (res.status === 401) return (location.href = "/login");
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.statusText);
       const data = await res.json();
       pending.remove();
