@@ -223,3 +223,6 @@ __marimo__/
 # Login data (hashed passwords, demo credentials)
 users.json
 demo_credentials.txt
+
+# Runtime logs
+logs/

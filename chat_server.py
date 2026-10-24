@@ -22,6 +22,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+from app_logging import log_chat, log_event
+
 load_dotenv(override=True)
 
 ROOT = Path(__file__).parent
@@ -46,6 +48,10 @@ rag = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(rag)
 
 app = FastAPI()
+
+
+def client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
 
 
 def hash_password(password: str, salt: bytes) -> str:
@@ -99,9 +105,12 @@ def current_user(request: Request) -> str | None:
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):
-    if request.url.path in PUBLIC_PATHS or current_user(request):
+    user = current_user(request)
+    request.state.user = user
+    if request.url.path in PUBLIC_PATHS or user:
         return await call_next(request)
     if request.url.path.startswith("/api/"):
+        log_event("unauthorized_api", ip=client_ip(request), detail=request.url.path, level="WARNING")
         return JSONResponse({"detail": "Not signed in"}, status_code=401)
     return RedirectResponse("/login")
 
@@ -142,10 +151,11 @@ def start_session(response: Response, username: str):
 
 @app.post("/api/register")
 def register(body: Register, request: Request, response: Response):
-    ip = request.client.host if request.client else "unknown"
+    ip = client_ip(request)
     now = time.time()
     recent = [t for t in signups.get(ip, []) if now - t < LOCKOUT_SECONDS]
     if len(recent) >= MAX_SIGNUPS:
+        log_event("register_rate_limited", ip=ip, level="WARNING")
         raise HTTPException(429, "Too many sign-ups. Try again in a few minutes.")
     username = body.username.strip()
     if not USERNAME_RE.match(username):
@@ -154,44 +164,53 @@ def register(body: Register, request: Request, response: Response):
         raise HTTPException(400, "Password must be at least 8 characters")
     signups[ip] = recent + [now]
     if not save_user(username, body.password):
+        log_event("register_failed", username, ip, "username taken", "WARNING")
         raise HTTPException(409, "That username is already taken")
     start_session(response, username)
+    log_event("register", username, ip)
     return {"ok": True}
 
 
 @app.post("/api/login")
 def login(body: Login, request: Request, response: Response):
-    ip = request.client.host if request.client else "unknown"
+    ip = client_ip(request)
     now = time.time()
     recent = [t for t in failed.get(ip, []) if now - t < LOCKOUT_SECONDS]
     failed[ip] = recent
     if len(recent) >= MAX_FAILS:
+        log_event("login_locked_out", body.username.strip(), ip, level="WARNING")
         raise HTTPException(429, "Too many attempts. Try again in a few minutes.")
     if not check_password(body.username.strip(), body.password):
         recent.append(now)
+        log_event("login_failed", body.username.strip(), ip, level="WARNING")
         raise HTTPException(401, "Invalid username or password")
     failed.pop(ip, None)
     start_session(response, body.username.strip())
+    log_event("login", body.username.strip(), ip)
     return {"ok": True}
 
 
 @app.post("/api/logout")
-def logout(response: Response):
+def logout(request: Request, response: Response):
+    log_event("logout", request.state.user, client_ip(request))
     response.delete_cookie(COOKIE)
     return {"ok": True}
 
 
 @app.post("/api/chat")
-def chat(req: ChatRequest):
+def chat(req: ChatRequest, request: Request):
     question = req.question.strip()
     if not question:
         raise HTTPException(400, "Question is empty")
     history = [m.model_dump() for m in req.history[-10:]]
+    user, ip, started = request.state.user, client_ip(request), time.time()
     try:
         answer, docs = rag.answer_question(question, history)
     except Exception as exc:
+        log_chat(user, ip, question, None, [], int((time.time() - started) * 1000), error=str(exc))
         raise HTTPException(500, f"Chatbot error: {exc}")
     sources = sorted({Path(d.metadata.get("source", "")).name for d in docs if d.metadata.get("source")})
+    log_chat(user, ip, question, answer, sources, int((time.time() - started) * 1000))
     return {"answer": answer, "sources": sources}
 
 
