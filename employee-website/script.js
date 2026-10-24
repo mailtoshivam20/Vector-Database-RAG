@@ -1,21 +1,8 @@
-// Sample (fictional) employee data — replace or extend with real records.
-const employees = [
-  { name: "Avery Lancaster", role: "CEO & Co-Founder", department: "Leadership", email: "avery.lancaster@insurellm.com", phone: "+1 415 555 0101", location: "San Francisco, CA", joined: "2015-03-01", skills: ["Strategy", "Fundraising", "InsurTech"], bio: "Co-founded Insurellm to modernise insurance with technology and leads company vision and growth." },
-  { name: "Maxine Thompson", role: "Lead Data Engineer", department: "Engineering", email: "maxine.thompson@insurellm.com", phone: "+1 415 555 0112", location: "Austin, TX", joined: "2017-01-15", skills: ["Python", "Spark", "Data Pipelines"], bio: "Owns the data platform powering pricing models and analytics across all products." },
-  { name: "Oliver Spencer", role: "Backend Developer", department: "Engineering", email: "oliver.spencer@insurellm.com", phone: "+1 415 555 0123", location: "Remote", joined: "2019-06-10", skills: ["Java", "Microservices", "AWS"], bio: "Builds core policy and claims services used by Carllm and Homellm." },
-  { name: "Priya Nair", role: "Machine Learning Engineer", department: "Engineering", email: "priya.nair@insurellm.com", phone: "+1 415 555 0134", location: "San Francisco, CA", joined: "2021-09-01", skills: ["PyTorch", "RAG", "NLP"], bio: "Develops AI features including the internal knowledge assistant and risk scoring models." },
-  { name: "Emily Tran", role: "Product Manager", department: "Product", email: "emily.tran@insurellm.com", phone: "+1 415 555 0145", location: "New York, NY", joined: "2018-04-23", skills: ["Roadmapping", "User Research", "Agile"], bio: "Leads the Rellm reinsurance platform from discovery through delivery." },
-  { name: "Jordan Blake", role: "UX Designer", department: "Product", email: "jordan.blake@insurellm.com", phone: "+1 415 555 0156", location: "Remote", joined: "2022-02-14", skills: ["Figma", "Design Systems", "Accessibility"], bio: "Designs customer-facing portals and maintains the Insurellm design system." },
-  { name: "Samuel Trenton", role: "Sales Director", department: "Sales", email: "samuel.trenton@insurellm.com", phone: "+1 415 555 0167", location: "Chicago, IL", joined: "2016-08-08", skills: ["Enterprise Sales", "Negotiation", "CRM"], bio: "Leads the enterprise sales team and key carrier partnerships." },
-  { name: "Alex Chen", role: "Account Executive", department: "Sales", email: "alex.chen@insurellm.com", phone: "+1 415 555 0178", location: "Chicago, IL", joined: "2023-03-20", skills: ["B2B Sales", "Prospecting"], bio: "Manages mid-market accounts for Marketllm and Bizllm." },
-  { name: "Nina Patel", role: "Marketing Manager", department: "Marketing", email: "nina.patel@insurellm.com", phone: "+1 415 555 0189", location: "New York, NY", joined: "2020-11-02", skills: ["Content", "SEO", "Campaigns"], bio: "Runs brand, content and demand generation campaigns." },
-  { name: "Carlos Mendes", role: "Customer Success Lead", department: "Customer Success", email: "carlos.mendes@insurellm.com", phone: "+1 415 555 0190", location: "Austin, TX", joined: "2019-01-07", skills: ["Onboarding", "Support", "Retention"], bio: "Helps clients get value from Insurellm products and leads the support team." },
-  { name: "Grace Kim", role: "HR Business Partner", department: "People", email: "grace.kim@insurellm.com", phone: "+1 415 555 0201", location: "San Francisco, CA", joined: "2018-10-15", skills: ["Recruiting", "Employee Relations"], bio: "Supports hiring, onboarding and employee wellbeing across the company." },
-  { name: "Daniel Okafor", role: "Finance Controller", department: "Finance", email: "daniel.okafor@insurellm.com", phone: "+1 415 555 0212", location: "Remote", joined: "2020-05-18", skills: ["Accounting", "FP&A", "Compliance"], bio: "Oversees financial reporting, budgeting and audits." },
-];
+// Employee records live in employees.json (also used to build the chatbot's vector DB).
+let employees = [];
 
 const palette = ["#2f5bea", "#0e9f6e", "#d97706", "#db2777", "#7c3aed", "#0891b2", "#dc2626", "#4b5563"];
-const departments = [...new Set(employees.map(e => e.department))].sort();
+let departments = [];
 
 const $ = id => document.getElementById(id);
 const grid = $("grid");
@@ -97,7 +84,6 @@ function showDetail(e) {
   $("detail").showModal();
 }
 
-deptSelect.innerHTML += departments.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
 [searchInput, deptSelect, sortSelect].forEach(el => el.addEventListener("input", render));
 grid.addEventListener("click", ev => {
   const card = ev.target.closest(".card");
@@ -106,5 +92,10 @@ grid.addEventListener("click", ev => {
 $("closeDetail").addEventListener("click", () => $("detail").close());
 $("detail").addEventListener("click", ev => { if (ev.target === $("detail")) $("detail").close(); });
 
-renderStats();
-render();
+fetch("employees.json").then(r => r.json()).then(data => {
+  employees = data;
+  departments = [...new Set(employees.map(e => e.department))].sort();
+  deptSelect.innerHTML += departments.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
+  renderStats();
+  render();
+});

@@ -42,6 +42,22 @@
     <div class="container">&copy; Insurellm &middot; Internal use only</div>
   </footer>
 
+  <button class="chat-fab" id="chatFab" aria-label="Open Insurellm assistant">💬</button>
+  <section class="chat" id="chat" aria-label="Insurellm assistant" hidden>
+    <header class="chat-head">
+      <strong>Insurellm Assistant</strong>
+      <button id="chatClose" aria-label="Close chat">&times;</button>
+    </header>
+    <div class="chat-log" id="chatLog" aria-live="polite">
+      <div class="msg bot">Hi! Ask me anything about Insurellm.</div>
+    </div>
+    <form class="chat-form" id="chatForm">
+      <input id="chatInput" placeholder="Type your question…" autocomplete="off" required>
+      <button type="submit">Send</button>
+    </form>
+  </section>
+
   <script src="script.js"></script>
+  <script src="chat.js"></script>
 </body>
 </html>

@@ -11,7 +11,7 @@ load_dotenv(override=True)
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 
-MODEL = "gpt-4.1-nano"
+MODEL = "gpt-5-nano"
 DB_NAME = str(Path(__file__).parent.parent / "vector_db")
 
 embeddings = OpenAIEmbeddings(
@@ -75,7 +75,8 @@ def answer_question(question: str, history: list[dict] = []) -> tuple[str, list[
 
     return response.content, docs
 
-question = "What is Insurellm?"
-answer, docs = answer_question(question)
+if __name__ == "__main__":
+    question = "What is Insurellm?"
+    answer, docs = answer_question(question)
 
-print(answer)
+    print(answer)

@@ -4,7 +4,13 @@
     {
       "name": "employee-website",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8085", "--directory", "employee-website"],
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "chat_server:app",
+        "--port",
+        "8085"
+      ],
       "port": 8085
     }
   ]
